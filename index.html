@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Drobo Capacity Calculator</title>
 <style>
+
 	:root {
 		--bg: #12151a;
 		--panel: #1b1f27;
@@ -43,7 +44,7 @@
 	main {
 		max-width: 760px;
 		margin: 0 auto;
-		padding: 2rem 1.5rem 4rem;
+		padding: 2rem 1.5rem 0;
 	}
 	.card {
 		background: var(--panel);
@@ -150,23 +151,52 @@
 	}
 	.stat.highlight .value { color: var(--accent); }
 
-	.note {
-		font-size: 0.8rem;
-		color: var(--text-dim);
-		line-height: 1.6;
-	}
-	.note code {
-		background: var(--panel-2);
-		padding: 0.1rem 0.35rem;
-		border-radius: 5px;
-		font-size: 0.75rem;
-	}
-	footer {
+	.hero-stat {
 		text-align: center;
+		padding: 0.5rem 0 1.5rem;
+	}
+	.hero-stat .label {
+		font-size: 0.85rem;
+		color: var(--text-dim);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		margin-bottom: 0.4rem;
+	}
+	.hero-stat .value {
+		font-size: 3rem;
+		font-weight: 700;
+		color: var(--accent);
+		font-variant-numeric: tabular-nums;
+		line-height: 1.1;
+	}
+
+	.warning {
+		display: none;
+		align-items: center;
+		gap: 0.6rem;
+		background: rgba(240, 168, 96, 0.12);
+		border: 1px solid var(--warn);
+		color: var(--warn);
+		border-radius: 10px;
+		padding: 0.75rem 1rem;
+		font-size: 0.85rem;
+		margin-bottom: 1.25rem;
+	}
+	.warning.visible { display: flex; }
+	.warning .icon {
+		font-size: 1.1rem;
+		line-height: 1;
+	}
+	
+	footer {
+		width: 46rem;
+		margin: 0 auto;
+		text-align: justify;
 		color: var(--text-dim);
 		font-size: 0.8rem;
 		padding: 0 1.5rem 2.5rem;
 	}
+
 </style>
 </head>
 <body>
@@ -193,21 +223,27 @@
 	</div>
 
 	<div class="card">
+		<div class="hero-stat">
+			<div class="label">Available for data</div>
+			<div class="value" id="avail-out">&ndash;</div>
+		</div>
+
+		<div class="warning" id="no-redundancy-warning">
+			<span class="icon">&#9888;</span>
+			<span>Used for protection is 0 &mdash; this configuration has no redundancy. A single drive failure will lose data.</span>
+		</div>
+
 		<div class="results">
 			<div class="stat">
 				<div class="label">Raw capacity</div>
 				<div class="value" id="raw-out">&ndash;</div>
 			</div>
-			<div class="stat highlight">
-				<div class="label">Available for data</div>
-				<div class="value" id="avail-out">&ndash;</div>
-			</div>
 			<div class="stat">
-				<div class="label">Reserved for expansion</div>
+				<div class="label">Expansion reserve</div>
 				<div class="value" id="reserved-out">&ndash;</div>
 			</div>
 			<div class="stat">
-				<div class="label">Used for protection</div>
+				<div class="label">Protection</div>
 				<div class="value" id="protection-out">&ndash;</div>
 			</div>
 			<div class="stat">
@@ -217,17 +253,16 @@
 		</div>
 	</div>
 
-	<p class="note">
-		Uses the actual BeyondRAID capacity-weighting tables recovered from Drobo's own
-		<code>drobo-calculators.min.js</code>, not a simplified RAID5/6 approximation. Protection
-		overhead is non-linear with drive count by design &mdash; this matches official figures
-		exactly for same-size and mixed-size arrays up to 12 bays, the limit of the B1200i.
-	</p>
 </main>
 
 <footer>
-	Unofficial tool, not affiliated with Drobo or StorCentric. Figures are estimates &mdash;
-	actual results may vary slightly by drive and firmware.
+
+	<p >
+		Uses the BeyondRAID capacity-weighting tables recovered from the original calculator.
+		Unofficial tool, not affiliated with anybody. Figures are estimates. Actual results may
+		vary slightly by drive, firmware, and whether your Drobo is actually working today or not.
+	</p>
+
 </footer>
 
 <script>
@@ -251,6 +286,7 @@ const ddrToggle = document.getElementById('ddr-toggle');
 const bayCountDisplay = document.getElementById('bay-count-display');
 const addBayBtn = document.getElementById('add-bay');
 const removeBayBtn = document.getElementById('remove-bay');
+const noRedundancyWarning = document.getElementById('no-redundancy-warning');
 
 function computeByteValues(ddrFlag, t, n) {
 	const s = n.length;
@@ -336,6 +372,7 @@ function compute(){
 	reservedOut.textContent = displayValue(vals.reserved);
 	protectionOut.textContent = displayValue(vals.protection);
 	overheadOut.textContent = displayValue(vals.overhead);
+	noRedundancyWarning.classList.toggle('visible', vals.protection <= 0);
 }
 
 ddrToggle.addEventListener('change', e => { ddr = e.target.checked; compute(); });
