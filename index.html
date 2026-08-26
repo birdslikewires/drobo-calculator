@@ -230,7 +230,12 @@
 
 		<div class="warning" id="no-redundancy-warning">
 			<span class="icon">&#9888;</span>
-			<span>This configuration has no redundancy. A single drive failure will lose data.</span>
+			<span>This configuration has no redundancy. Drive failure will lose all data.</span>
+		</div>
+
+		<div class="warning" id="ddr-two-bay-warning">
+			<span class="icon">&#9888;</span>
+			<span>Dual disk redundancy isn't possible with two drives. Figures show single disk redundancy.</span>
 		</div>
 
 		<div class="results">
@@ -289,6 +294,7 @@ const bayCountDisplay = document.getElementById('bay-count-display');
 const addBayBtn = document.getElementById('add-bay');
 const removeBayBtn = document.getElementById('remove-bay');
 const noRedundancyWarning = document.getElementById('no-redundancy-warning');
+const ddrTwoBayWarning = document.getElementById('ddr-two-bay-warning');
 
 function computeByteValues(ddrFlag, t, n) {
 	const s = n.length;
@@ -375,6 +381,7 @@ function compute(){
 	protectionOut.textContent = displayValue(vals.protection);
 	overheadOut.textContent = displayValue(vals.overhead);
 	noRedundancyWarning.classList.toggle('visible', vals.protection <= 0);
+	ddrTwoBayWarning.classList.toggle('visible', ddr && n.length === 2);
 }
 
 ddrToggle.addEventListener('change', e => { ddr = e.target.checked; compute(); });
