@@ -338,8 +338,7 @@ function displayValue(bytes) {
 	let unit, val;
 	if (bytes > TB) { unit = 'TB'; val = (bytes - FACTOR_TB*bytes)/TB; }
 	else { unit = 'GB'; val = (bytes - FACTOR_GB*bytes)/GB; }
-	val = Math.round(val*100)/100;
-	return val.toLocaleString() + ' ' + unit;
+	return val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + unit;
 }
 
 function render(){
