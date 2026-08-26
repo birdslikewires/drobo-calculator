@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drobo Capacity Calculator</title>
+<style>
+	:root {
+		--bg: #12151a;
+		--panel: #1b1f27;
+		--panel-2: #232833;
+		--border: #333947;
+		--text: #e7e9ee;
+		--text-dim: #9aa2b1;
+		--accent: #4fd1c5;
+		--accent-dim: #2c7c74;
+		--warn: #f0a860;
+	}
+	* { box-sizing: border-box; }
+	body {
+		margin: 0;
+		background: var(--bg);
+		color: var(--text);
+		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+		line-height: 1.5;
+	}
+	header {
+		padding: 2.5rem 1.5rem 1.5rem;
+		text-align: center;
+		border-bottom: 1px solid var(--border);
+	}
+	header h1 {
+		margin: 0 0 0.4rem;
+		font-size: 1.9rem;
+		font-weight: 600;
+		letter-spacing: -0.01em;
+	}
+	header p {
+		margin: 0;
+		color: var(--text-dim);
+		font-size: 0.95rem;
+	}
+	main {
+		max-width: 760px;
+		margin: 0 auto;
+		padding: 2rem 1.5rem 4rem;
+	}
+	.card {
+		background: var(--panel);
+		border: 1px solid var(--border);
+		border-radius: 14px;
+		padding: 1.5rem;
+		margin-bottom: 1.5rem;
+	}
+	.row-top {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		flex-wrap: wrap;
+		gap: 1rem;
+		margin-bottom: 1.25rem;
+	}
+	.toggle-label {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		font-size: 0.95rem;
+		cursor: pointer;
+		user-select: none;
+	}
+	.toggle-label input {
+		width: 18px;
+		height: 18px;
+		accent-color: var(--accent);
+		cursor: pointer;
+	}
+	.bay-count-controls {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		font-size: 0.9rem;
+		color: var(--text-dim);
+	}
+	.bay-count-controls button {
+		width: 30px;
+		height: 30px;
+		border-radius: 8px;
+		border: 1px solid var(--border);
+		background: var(--panel-2);
+		color: var(--text);
+		font-size: 1.1rem;
+		cursor: pointer;
+		line-height: 1;
+	}
+	.bay-count-controls button:hover { border-color: var(--accent); color: var(--accent); }
+	.bay-count-controls button:disabled { opacity: 0.35; cursor: not-allowed; }
+	#bay-count-display { min-width: 5.5rem; text-align: center; }
+
+	.bays {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+		gap: 0.7rem;
+	}
+	.bay {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+	.bay label {
+		font-size: 0.72rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--text-dim);
+	}
+	.bay select {
+		width: 100%;
+		background: var(--panel-2);
+		color: var(--text);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		padding: 0.5rem 0.4rem;
+		font-size: 0.9rem;
+		appearance: none;
+		-webkit-appearance: none;
+	}
+	.bay select:focus {
+		outline: none;
+		border-color: var(--accent);
+	}
+
+	.results {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+		gap: 1rem;
+	}
+	.stat {
+		background: var(--panel-2);
+		border-radius: 10px;
+		padding: 0.9rem 1rem;
+	}
+	.stat .label {
+		font-size: 0.75rem;
+		color: var(--text-dim);
+		margin-bottom: 0.3rem;
+	}
+	.stat .value {
+		font-size: 1.3rem;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+	}
+	.stat.highlight .value { color: var(--accent); }
+
+	.note {
+		font-size: 0.8rem;
+		color: var(--text-dim);
+		line-height: 1.6;
+	}
+	.note code {
+		background: var(--panel-2);
+		padding: 0.1rem 0.35rem;
+		border-radius: 5px;
+		font-size: 0.75rem;
+	}
+	footer {
+		text-align: center;
+		color: var(--text-dim);
+		font-size: 0.8rem;
+		padding: 0 1.5rem 2.5rem;
+	}
+</style>
+</head>
+<body>
+
+<header>
+	<h1>Drobo capacity calculator</h1>
+	<p>Estimate usable BeyondRAID capacity for up to 12 drives</p>
+</header>
+
+<main>
+	<div class="card">
+		<div class="row-top">
+			<label class="toggle-label">
+				<input type="checkbox" id="ddr-toggle">
+				Dual disk redundancy
+			</label>
+			<div class="bay-count-controls">
+				<button id="remove-bay" aria-label="Remove bay">&minus;</button>
+				<span id="bay-count-display">4 bays</span>
+				<button id="add-bay" aria-label="Add bay">+</button>
+			</div>
+		</div>
+		<div class="bays" id="bays"></div>
+	</div>
+
+	<div class="card">
+		<div class="results">
+			<div class="stat">
+				<div class="label">Raw capacity</div>
+				<div class="value" id="raw-out">&ndash;</div>
+			</div>
+			<div class="stat highlight">
+				<div class="label">Available for data</div>
+				<div class="value" id="avail-out">&ndash;</div>
+			</div>
+			<div class="stat">
+				<div class="label">Reserved for expansion</div>
+				<div class="value" id="reserved-out">&ndash;</div>
+			</div>
+			<div class="stat">
+				<div class="label">Used for protection</div>
+				<div class="value" id="protection-out">&ndash;</div>
+			</div>
+			<div class="stat">
+				<div class="label">Overhead</div>
+				<div class="value" id="overhead-out">&ndash;</div>
+			</div>
+		</div>
+	</div>
+
+	<p class="note">
+		Uses the actual BeyondRAID capacity-weighting tables recovered from Drobo's own
+		<code>drobo-calculators.min.js</code>, not a simplified RAID5/6 approximation. Protection
+		overhead is non-linear with drive count by design &mdash; this matches official figures
+		exactly for same-size and mixed-size arrays up to 12 bays, the limit of the B1200i.
+	</p>
+</main>
+
+<footer>
+	Unofficial tool, not affiliated with Drobo or StorCentric. Figures are estimates &mdash;
+	actual results may vary slightly by drive and firmware.
+</footer>
+
+<script>
+const TB = 1e12, GB = 1e9;
+const FACTOR_TB = 0.0905, FACTOR_GB = 0.0687;
+const availSDR = [0,1,2,3,4,4.8,6,6.875,7.98,8.78,9.59,10.5];
+const availDDR = [0,0,1,2,3,4,4.667,5.95,6.7,7.8,8.6,9.5];
+const sizes = [1,2,3,4,5,6,8,10,12,14,16,18,20,22,24,26,28,30];
+const MAX_BAYS = 12;
+const MIN_BAYS = 1;
+let drives = [4,4,4,4];
+let ddr = false;
+
+const baysEl = document.getElementById('bays');
+const rawOut = document.getElementById('raw-out');
+const availOut = document.getElementById('avail-out');
+const reservedOut = document.getElementById('reserved-out');
+const protectionOut = document.getElementById('protection-out');
+const overheadOut = document.getElementById('overhead-out');
+const ddrToggle = document.getElementById('ddr-toggle');
+const bayCountDisplay = document.getElementById('bay-count-display');
+const addBayBtn = document.getElementById('add-bay');
+const removeBayBtn = document.getElementById('remove-bay');
+
+function computeByteValues(ddrFlag, t, n) {
+	const s = n.length;
+	if (s === 0 || t <= 0) return {available:0, reserved:0, protection:0, overhead:0};
+	if (s === 1) {
+		const rawAvail = t/2;
+		const overhead = rawAvail/TB*(1.75*GB);
+		const available = rawAvail - overhead;
+		const reserved = t - available;
+		return {available, reserved, protection:0, overhead};
+	}
+	let availSDRraw=0, resSDRraw=0, availDDRraw=0, resDDRraw=0, l=0;
+	for (let y=0; y<s; ) {
+		const r = n[y];
+		const d = s-y-1;
+		let o = availSDR[d] || 0;
+		if (o>0) availSDRraw += (r-l)*o; else resSDRraw += (r-l);
+		o = availDDR[d] || 0;
+		if (o>0) availDDRraw += (r-l)*o; else resDDRraw += (r-l)*(s-y);
+		let b=y+1;
+		while (b<s && n[b]===r) b++;
+		y=b; l=r;
+	}
+	if (ddrFlag && s===2) { availDDRraw = availSDRraw; resDDRraw = resSDRraw; }
+	if (ddrFlag) {
+		const overhead = availDDRraw/TB*(1.75*GB);
+		const available = availDDRraw - overhead;
+		const reserved = resDDRraw;
+		const protection = t - available - reserved;
+		return {available, reserved, protection, overhead};
+	} else {
+		const overhead = availSDRraw/TB*(1.75*GB);
+		const available = availSDRraw - overhead;
+		const reserved = resSDRraw;
+		const protection = t - available - reserved;
+		return {available, reserved, protection, overhead};
+	}
+}
+
+function displayValue(bytes) {
+	let unit, val;
+	if (bytes > TB) { unit = 'TB'; val = (bytes - FACTOR_TB*bytes)/TB; }
+	else { unit = 'GB'; val = (bytes - FACTOR_GB*bytes)/GB; }
+	val = Math.round(val*100)/100;
+	return val.toLocaleString() + ' ' + unit;
+}
+
+function render(){
+	baysEl.innerHTML = '';
+	drives.forEach((val, i) => {
+		const wrap = document.createElement('div');
+		wrap.className = 'bay';
+		const label = document.createElement('label');
+		label.textContent = 'Bay ' + (i+1);
+		const select = document.createElement('select');
+		sizes.forEach(s => {
+			const opt = document.createElement('option');
+			opt.value = s;
+			opt.textContent = s + ' TB';
+			if (s === val) opt.selected = true;
+			select.appendChild(opt);
+		});
+		select.addEventListener('change', e => {
+			drives[i] = Number(e.target.value);
+			compute();
+		});
+		wrap.appendChild(label);
+		wrap.appendChild(select);
+		baysEl.appendChild(wrap);
+	});
+	bayCountDisplay.textContent = drives.length + (drives.length === 1 ? ' bay' : ' bays');
+	addBayBtn.disabled = drives.length >= MAX_BAYS;
+	removeBayBtn.disabled = drives.length <= MIN_BAYS;
+	compute();
+}
+
+function compute(){
+	const n = drives.map(s => s*TB).sort((a,b) => a-b);
+	const t = n.reduce((a,b) => a+b, 0);
+	rawOut.textContent = displayValue(t);
+	const vals = computeByteValues(ddr, t, n);
+	availOut.textContent = displayValue(vals.available);
+	reservedOut.textContent = displayValue(vals.reserved);
+	protectionOut.textContent = displayValue(vals.protection);
+	overheadOut.textContent = displayValue(vals.overhead);
+}
+
+ddrToggle.addEventListener('change', e => { ddr = e.target.checked; compute(); });
+addBayBtn.addEventListener('click', () => {
+	if (drives.length < MAX_BAYS) { drives.push(4); render(); }
+});
+removeBayBtn.addEventListener('click', () => {
+	if (drives.length > MIN_BAYS) { drives.pop(); render(); }
+});
+
+render();
+</script>
+
+</body>
+</html>
